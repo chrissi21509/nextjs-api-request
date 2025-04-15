@@ -1,28 +1,30 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
- 
+  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', 'https://blockify.icu')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
-  
+  // Handle preflight request
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
   }
 
- 
-  const { message } = req.body
+  // Handle the POST request
+  const { content } = req.body  // Accept `content` instead of `message`
+
+  if (!content) {
+    return res.status(400).json({ error: 'Content is required' })
+  }
+
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL
 
   if (!webhookUrl) return res.status(500).json({ error: 'Missing webhook URL' })
-  if (!message) return res.status(400).json({ error: 'Message is required' })
 
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: message }),
+      body: JSON.stringify({ content }),
     })
 
     if (!response.ok) throw new Error('Failed to send to Discord')
