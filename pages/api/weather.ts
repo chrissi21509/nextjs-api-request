@@ -1,31 +1,24 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { NextApiRequest, NextApiResponse } from 'next'
-import cacheData from "memory-cache";
-import getConfig from 'next/config'
+// /src/pages/api/send-to-discord.ts
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-const { publicRuntimeConfig } = getConfig()
+  const { message } = req.body
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
 
-async function fetchWithCache(url: string, mins: number) {
-  const value = cacheData.get(url);
-  if (value) {
-    console.log("Value loaded from cache.");
-    return value;
-  } else {
-    const res = await fetch(url);
-    const data = await res.json();
-    cacheData.put(url, data, mins * 1000 * 60);
-    console.log("Cache generated.");
-    return data;
+  if (!webhookUrl) return res.status(500).json({ error: 'Missing webhook URL' })
+  if (!message) return res.status(400).json({ error: 'Message is required' })
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: message }),
+    })
+
+    if (!response.ok) throw new Error('Discord webhook failed')
+
+    return res.status(200).json({ success: true })
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Unknown error' })
   }
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=Stuttgart,de&units=metric&APPID=${process.env.API_KEY}`
-  const min = publicRuntimeConfig.minutescache;
-  const data = await fetchWithCache(url, min);
-
-  return res.status(200).json(data);
 }
