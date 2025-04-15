@@ -1,8 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+ 
+  res.setHeader('Access-Control-Allow-Origin', 'https://blockify.icu')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
+ 
   const { message } = req.body
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL
 
@@ -16,10 +25,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       body: JSON.stringify({ content: message }),
     })
 
-    if (!response.ok) throw new Error('Discord webhook failed')
+    if (!response.ok) throw new Error('Failed to send to Discord')
 
     return res.status(200).json({ success: true })
-  } catch (error) {
-    return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' })
+  } catch (err) {
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
   }
 }
